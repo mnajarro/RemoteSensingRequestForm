@@ -1,0 +1,428 @@
+/* Main Application */
+h1{
+	color: #002A6C;
+	text-align: center;
+	margin-left: 0%;
+	font-family: "Gill Sans MT";
+	font-weight: normal;
+	font-size: 230%;
+	padding: 0% 0%;
+}
+h2{
+	color: black;
+	text-align: center;
+	margin-left: 0%;
+	margin-left: 0%;
+	font-family: "Gill Sans MT";
+	font-size: 180%;
+	padding: 0% 0%;
+}
+
+body{
+	background-color: #DDDDDD;
+	/*background-image: url('images/tacloban.PNG');*/
+	background-size: 45%;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+#p{
+	font-size: 150%;
+
+}
+
+#p2{
+	font-size: 110%;
+	text-align: center;
+}
+#p3{
+	font-size: 110%;
+	margin-left: 5%;
+	
+}
+#p3 li{
+	padding: 1% 0%
+}
+#p4{
+	list-style-type: lower-alpha;
+}
+#p5{
+	font-size: 120%;
+}
+#p5 li{
+	padding: 1% 0%
+}
+#labBanner{
+	width: 90%;
+	height: 15%; /*250px*/
+	margin-left: 5%;
+	/*margin-right: 20%;*/
+	border-style: none;
+}
+#logoDiv2{
+    border-style: none;
+    height: .72em;
+	width: 5.1em;
+	/*height: 20%;
+    width: 22%;*/
+}
+#logoDiv{
+	position: absolute;
+    float: left;
+    margin-right: 0%;
+    border-style: none;
+    height: 3%;
+    width: 11%;
+	margin-top: 15%;
+    margin-left: 10%
+}
+#logo{
+   position: absolute;
+   float: left;
+   margin-left: 11%;
+   margin-top:  58%;
+   border-style: none;
+   /*height: 6%;
+   width: 90%;*/
+   
+}
+#sidepanel{
+	position: absolute;
+	float: left;
+	margin-top: 0%;
+	background-color: #C21F32;
+	margin-left: 5%;
+	height: auto;
+	width: 15%;
+	border-style: none;
+	border-width: 5px;
+	border-color: #666666;
+	vertical-align: top;
+	overflow: auto;
+	
+
+}
+#USAIDlogoimg {
+    position: absolute;
+	left: 0;
+    bottom: 0;
+	list-style-type:none;
+	padding: 10px;
+    margin: 2px;
+}
+.sidepanelimage{
+	max-width: 100%;
+    height: auto;
+    width: auto\9;
+	margin: auto;
+    text-align: center;
+	padding-top: 5%;
+    padding-right: 0%;
+    padding-bottom: 5%;
+    padding-left: 0%;
+
+
+}
+.sidepanelimage2{
+	width: 50%;
+    margin-left: auto;
+    margin-right: auto;
+	margin-bottom: auto;
+	margin-top: auto
+}
+.sidepanelimage3{
+	width: 30%;
+	padding: 10% 5%;
+    margin-left: auto;
+    margin-right: auto;
+	margin-bottom: auto;
+	margin-top: auto
+}
+
+#Navul{
+	list-style-type:none;
+	padding: 5%;
+    margin: 2%;
+	font-size: 130%;
+	font-family: "Gill Sans MT"; /*'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;*/
+	color: white;
+
+}
+#Navul a{
+    text-decoration: none;
+    text-transform: uppercase;
+	color: white;
+	font-weight: bold;
+}
+#Navul a:hover, a:active {
+    background-color: #002A6C;
+
+
+}
+@media screen and (max-width: 600px) {
+#Navul{
+	list-style-type:none;
+	padding: 5%;
+    margin: 2%;
+	font-size:45%;
+	font-family: "Gill Sans MT"; /*'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;*/
+	color: white;
+	
+}
+#mainbody{
+	font-size:50%;
+}
+.imagecenter{
+	display: block;
+    margin-left: auto;
+    margin-right: auto;
+	width: 30%;
+}
+}
+@media screen and (min-width: 600px) and (max-width: 1000px) {
+#Navul{
+	list-style-type:none;
+	padding: 5%;
+    margin: 2%;
+	font-size:75%;
+	font-family: "Gill Sans MT"; /*'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;*/
+	color: white;
+
+}
+#mainbody{
+	font-size:75%;
+}
+.imagecenter{
+	display: block;
+    margin-left: auto;
+    margin-right: auto;
+	width: 30%;
+}
+}
+
+.li-sidepanel{
+	
+	padding-top: 5%;
+    padding-right: 0%;
+    padding-bottom: 5%;
+    padding-left: 0%;
+	font-weight: normal;
+}
+#mainbody{
+	text-align: left;
+	border-style: none;
+	margin-left: 20.5%;
+	margin-right:5%;
+	border-style: solid;
+	border-width: 5px;
+	border-color: #666666;
+	padding-left: 2%;
+	padding-right: 2%;
+	font-family: "Gill Sans MT";
+
+	background-image: url('images/');
+	/*background-size: 45%;*/
+	background-repeat: no-repeat;
+	background-position: bottom;
+	background-color: rgba(255, 255, 255, 1);
+	overflow: auto
+}
+.numbers{
+	border-style: none;
+	border-width: 5px;
+	border-color: #666666;
+	font-size: 200%;
+	font-family: "Gill Sans MT";
+	background-color: white;
+	margin-top: 0%;
+	margin-bottom: 0px;
+	margin-left: 0%;
+	margin-right: 5%;
+    padding-top: 0px;
+    padding-right: 0%;
+    padding-bottom: 5%;
+    padding-left: 0%;
+	text-align: left;
+	list-style: none;
+	background-color: rgba(255, 255, 255, 1);
+	
+	
+}
+.numbers li{
+	padding-top: 4%;
+    padding-right: 0%;
+    padding-bottom: 10%;
+    padding-left: 18%;
+	border-bottom-style: dotted;
+}
+.steps1{
+	background-image: url('images/StepNumber1.png'); 
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+	
+}
+.steps2{
+	background-image: url('images/StepNumbers.png'); 
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+}
+.steps3{
+	background-image: url('images/StepNumber3.png');
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+}
+.steps4{
+	background-image: url('images/StepNumber4.png');
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+}
+.steps5{
+	background-image: url('images/StepNumber5.png');
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+}
+.steps6{
+	background-image: url('images/StepNumber6.png');
+	background-repeat: no-repeat;
+	background-size: 13%;
+	background-position: 0% 20%
+}
+#textLists{
+
+}
+#textMain{
+	margin-left: 15%;
+	margin-right: 5%;
+	border-style: solid;
+	border-width: 5px;
+	border-color: #666666;
+	list-style-type: circle;
+	text-align: left;
+}
+#iframe{
+	display: block;
+	text-align: center;
+	vertical-align:middle;
+
+}
+#aoiMap{
+	opacity: 0.8;
+	filter: alpha(opacity=80);
+	width: 75%;
+	height:50%;
+	text-align: center;
+}
+#aoiMap:hover {
+	opacity: 0.4;
+	filter: alpha(opacity=40);
+}
+#ULImagery{
+	font-size: 115%;
+	padding: 1% 0%
+}
+.imagecenter{
+	display: block;
+    margin-left: auto;
+    margin-right: auto;
+	max-width: 100%;
+}
+.imagerypics{
+   width: 80%;
+   margin-right:5%
+}
+#AboutSubtitle{
+	color: #002A6C;
+}
+/*Accordian FAQ*/
+div#accordion{
+    font-size: 140%;
+	font-family: "Gill Sans MT";
+} 
+div.accordion {
+    position: relative; /* required for bounding--works around a "peculiarity" in Prototype */
+}
+ 
+div.accordion-toggle{
+    position: relative; /* required for effect */
+    z-index: 10;        /* required for effect */
+    background: #002A6C;   /* required for effect--can be anything except "transparent" */
+    cursor: pointer;
+}
+ 
+div.accordion-toggle-active{
+    background: #fff;
+}
+ 
+div.accordion-content{
+    overflow: hidden;   /* required for effect */
+    background: #ffffff;
+	font-size: 110%;
+
+}
+/*from AOI tool*/
+#search {
+	position: relative;
+    display: block;
+    z-index: 3;
+	left: 70px; 
+	top: 65px; 
+    padding: 5px;
+  }
+  #map{
+  height: 850px; 
+  }
+  #SubmitBtn{
+  border: 3px solid white;
+  background-color:#000029; 
+  }
+#formheaders{
+	background-color: #666666;
+	color: white;
+  }
+.formheaders{
+	background-color: #666666;
+	color: white;
+}
+/* New Menu*/
+#cssmenu {
+  background: #333;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 12em;
+}
+#cssmenu li {
+  font: 67.5% "Lucida Sans Unicode", "Bitstream Vera Sans", "Trebuchet Unicode MS", "Lucida Grande", Verdana, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#cssmenu a {
+  background: #333;
+  border-bottom: 1px solid #393939;
+  color: #ccc;
+  display: block;
+  margin: 0;
+  padding: 8px 12px;
+  text-decoration: none;
+  font-weight: normal;
+}
+#cssmenu a:hover {
+  background: #2580a2 url("images/hover.gif") left center no-repeat;
+  color: #fff;
+  padding-bottom: 8px;
+}
+#imageryform{
+	font-family: "Gill Sans MT"; /*'Gill Sans', 'Gill Sans MT', Calibri, sans-serif;*/
+}
+#info{
+	position:absolute;  
+	color:yellow; 
+	text-shadow: 2px 2px #000000;
+	z-index:50;
+	right: 10%;
+}

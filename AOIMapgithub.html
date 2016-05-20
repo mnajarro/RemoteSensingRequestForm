@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<meta name="viewport" content="width=device-width,user-scalable=no">
+    <!--The viewport meta tag is used to improve the presentation and behavior of the samples 
+      on iOS devices-->
+	<meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+	<title> GeoCenter Remote Sensing Program Home Page </title>
+	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="http://js.arcgis.com/3.13/dijit/themes/nihilo/nihilo.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.13/esri/css/esri.css">
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css">
+	<link rel="stylesheet" href="http://dojotoolkit.org/reference-guide/1.10/_static/js/dijit/themes/claro/claro.css">
+	
+	<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+	<script src="http://js.arcgis.com/3.14/"></script>
+	<script>
+      var map, toolbar, symbol, geomTask;
+	 
+	  var gGraphic; 
+	  var AOIAreaSize; 
+
+	  var NoGraphic = true; 
+	  
+	  var AllGeometries = "";
+	  var AllAreas = 0; 
+	  var AllAreasCount = 0;
+	 
+	  var geocoder;
+	 
+	  var msize = getParam("mx");
+	  if(msize > 1){
+	  msize = msize * 1000; 
+	  }
+	  else{
+	  msize = 50000;
+	  }
+		//alert(msize); 
+
+		 
+	  var d = new Date(); 
+	  //alert(d.getFullYear());
+	  var day = (d.getDate() < 10) ? ("0" + d.getDate()) : d.getDate();
+	  var month = ((d.getMonth()+1) < 10) ? ("0" + (d.getMonth()+1)) : (d.getMonth()+1);
+	  //alert(d.getFullYear()+"-"+month+"-"+day); 
+	  var TodaysDate = d.getFullYear()+"-"+month+"-"+day;
+		
+		
+      require([
+        "esri/map", 
+		"esri/dijit/Geocoder",
+        "esri/toolbars/draw",
+        "esri/graphic",
+		"dojo/dom",
+		"dojo/dom-construct",
+		"dojo/on",
+		
+		"dojo/query",
+		
+		"esri/tasks/GeometryService",
+		"esri/geometry/Geometry",
+        "esri/geometry/Extent",
+		"esri/geometry/webMercatorUtils",
+        "esri/SpatialReference",
+        "esri/tasks/AreasAndLengthsParameters",
+		"dijit/ConfirmDialog",
+		
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol",
+		"esri/geometry/screenUtils",
+		"dojo/_base/Color",
+
+        "dojo/parser", "dijit/registry",
+		"dojo/date/locale",
+		
+		"dijit/form/DateTextBox",
+        "dijit/layout/BorderContainer", "dijit/layout/ContentPane", 
+        "dijit/form/Button", "dijit/WidgetSet", "dojo/domReady!"
+      ], function(
+        Map, Geocoder, Draw, Graphic, dom, domConstruct, on, query, GeometryService, Geometry, Extent, webMercatorUtils, SpatialReference, AreasAndLengthsParameters, ConfirmDialog,
+        SimpleMarkerSymbol, SimpleLineSymbol, SimpleFillSymbol, screenUtils, Color,
+        parser, registry, locale
+      ) {
+        parser.parse();
+
+		on(dom.byId("SubmitBtn"), "click", function () {
+          CombineItems(); 
+        });
+		
+		
+		//CONFIGURES GEOMETRY SERVICE. THIS IS CALLED AFTER A GRAPHIC IS DRAWN TO CHECK THE AIO SIZE
+		 esriConfig.defaults.geometryService = new GeometryService("INSERT URL HERE");
+		//var geometryService = new GeometryService("http://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer");
+		var geometryService = new GeometryService("INSERTURL HERE");
+		geometryService.on("areas-and-lengths-complete", outputAreaAndLength);
+		
+		
+		//LOADS THE MAP
+        map = new Map("map", {
+          basemap: "hybrid",
+          center: [-17.098071, 32.180187],
+          zoom: 2
+        });
+        
+        map.on("load", createToolbar);
+	
+		//Show Coordinates
+		map.on("load", function() {
+          //after map loads, connect to listen to mouse move & drag events
+          map.on("mouse-move", showCoordinates);
+          map.on("mouse-drag", showCoordinates);
+        });
+
+        function showCoordinates(evt) {
+          //the map is in web mercator but display coordinates in geographic (lat, long)
+          var mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint);
+          //display mouse coordinates
+          dom.byId("info").innerHTML = mp.x.toFixed(3) + ", " + mp.y.toFixed(3);
+        };
+	
+	     //LOAD SEARCH BOX
+	     //https://developers.arcgis.com/javascript/jshelp/tutorial_geocoder.html
+		 geocoder = new Geocoder({ 
+		 autoComplete: true,
+          map: map 
+         }, "search");
+         geocoder.startup();
+		 
+	
+
+		//LOADS THE GRAPHIC DRAWING TOOL ON THE MAP 
+        // loop through all dijits, connect onClick event
+        // listeners for buttons to activate drawing tools
+        registry.forEach(function(d) {
+          // d is a reference to a dijit
+          // could be a layout container or a button
+          if ( d.declaredClass === "dijit.form.Button" ) {
+            d.on("click", activateTool);
+          }
+        });
+
+        function activateTool() {
+          //var tool = this.label.toUpperCase().replace(/ /g, "_");
+		  var tool = "POLYGON";
+		  //alert(tool);
+          toolbar.activate(Draw[tool]);
+          //map.hideZoomSlider();
+        }
+
+        function createToolbar(themap) {
+          toolbar = new Draw(map);
+          toolbar.on("draw-end", addToMap);
+		  activateTool();  
+        }
+
+        function addToMap(evt) {
+          var symbol;
+          //toolbar.deactivate();
+          map.showZoomSlider();
+          switch (evt.geometry.type) {
+            case "point":
+            case "multipoint":
+              symbol = new SimpleMarkerSymbol();
+              break;
+            case "polyline":
+              symbol = new SimpleLineSymbol();
+              break;
+            default:
+              symbol = new SimpleFillSymbol();
+              break;
+          }
+          var graphic = new Graphic(evt.geometry, symbol);
+		  //alert(graphic.geometry);
+		  gGraphic = graphic; 
+          //map.graphics.add(gGraphic);
+		  
+					//AFTER GRAPHIC DRAWN, CHECK SIZE USING GEOMETRY SERVICE (LOADED IN PREVIOUS SECTION)
+					geometry = gGraphic.geometry; 
+					var areasAndLengthParams = new AreasAndLengthsParameters();
+					areasAndLengthParams.lengthUnit = GeometryService.UNIT_FOOT;
+					areasAndLengthParams.areaUnit = GeometryService.UNIT_SQUARE_KILOMETERS;
+					areasAndLengthParams.calculationType = "geodesic";
+					geometryService.simplify([geometry], function(simplifiedGeometries) {
+					areasAndLengthParams.polygons = simplifiedGeometries;
+					geometryService.areasAndLengths(areasAndLengthParams);
+		  
+		  });
+        }
+
+	//FUNCTION CALLED BY THE GEOMETRY SERVICE. THIS FUNCTION ENSURES AIO IS NOT TOO BIG.   
+	//IF FUNCTION IS TOO BIG, IT DELETES THE AOI AND ASKS YOU TO TRY AGAIN. 
+	function outputAreaAndLength(evtObj) {
+      var result = evtObj.result;
+      //console.log(json.stringify(result));
+      //dom.byId("area").innerHTML = result.areas[0].toFixed(3) + " acres";
+      //dom.byId("length").innerHTML = result.lengths[0].toFixed(3) + " feet";
+	  //alert(result.areas[0].toFixed(3) + " sq km");
+	  AOIAreaSize = Math.round(result.areas[0]); 
+	  
+		//alert(AOIAreaSize);
+		
+		//var msize = 150000; 
+		if(AOIAreaSize > msize){
+		//(100-(25000/AOIAreaSize))
+		alert("---SORRY!   Your AOI is Way Too Big --- \n\n The area you selected was "+dojo.number.format(AOIAreaSize)+" square kilometers. \n\n The maximum AOI should be no more than 25,000 square kilometers. This AOI will be deleted. \n\n Please create a new AOI that is "+(((1-(25000/AOIAreaSize)).toFixed(2)*100)-1).toFixed(0)+"% smaller");
+		map.graphics.clear(); 
+		AllGeometries = "";
+	    AllAreas = 0; 
+	    AllAreasCount = 0;
+		NoGraphic = true;
+		//DeleteAOIRequest(); 
+		}
+		else if(AOIAreaSize > 26000){
+		var DialogContent = "---WARNING!   Oversized AOI ---\n\n The area you selected was "+dojo.number.format(AOIAreaSize)+" square kilometers. \n\n If the AOI is over 25,000 square kilometers the requester will need to get special approval from the GeoCenter to process the request. \n\n Click OK to use your current AOI.\n\n Click Cancel to re-digitize a smaller AOI.";
+		var r = confirm(DialogContent);
+		if (r == true) {
+		map.graphics.add(gGraphic);
+		NoGraphic = false;
+		AddToJumboGraphic(); 
+		//toolbar.deactivate();
+		}
+		}
+		else{
+		map.graphics.add(gGraphic);
+		NoGraphic = false; 
+		AddToJumboGraphic(); 
+		//toolbar.deactivate();
+		alert("PASSED! Your AOI Size is Okay! \n\n Your Area of Interest is "+dojo.number.format(AOIAreaSize)+" square kilometers. \n\n Please provide additional information in the form below and submit.");
+		}
+		//updateFeature.attributes["Size_SqKM"] = AOIAreaSize;
+	  
+	  
+	  
+	  //FUNCTION CALLED BY PREVIOUS FUNCTION ONLY IF AOI SIZE IS OK. 
+	  //IF OK, THIS FUNCTION EXTRACTS THE GRAPHIC'S POLYGON FOOTPRINT AND CONCATINATES IT WITH PREVIOUSLY DIGITIZED POLYGONS. 
+	  function AddToJumboGraphic(){
+	  var CurrGeometry = JSON.stringify(gGraphic.toJson()); 
+	  //alert(CurrGeometry); 
+	 
+	  if(AllAreasCount == 0){
+	  //alert("zero: "+ AllAreasCount); 
+	  AllGeometries += CurrGeometry.substr(22,(CurrGeometry.indexOf('],"spatial')-22));
+	  AllAreasCount++;
+	  }
+	  else{
+	  //alert("one plus: "+ AllAreasCount);
+	  AllGeometries = AllGeometries + "," + CurrGeometry.substr(22,(CurrGeometry.indexOf('],"spatial')-22));
+	  AllAreasCount++;
+	  }
+	  //alert(AllGeometries);
+	   
+	  AllAreas += AOIAreaSize; 
+	  }
+	  
+	  
+    }
+
+	//FUNCTION CALLED UPON SUBMIT BUTTON CLICK
+	//THIS FUNCTION COMBINES THE GEOGRAPHIC AOI INFORMATION WITH THE ATTRIBUTE INFORMATION FROM THE FORM AND SUBMITS IT TO THE GIS SERVICE. 
+	var ChangedID = "";
+	function CombineItems(){
+	  //gra.setAttributes( {"XCoord":evt.mapPoint.x,"YCoord":evt.mapPoint.y,"Plant":"Mesa Mint"});
+	  
+	  var YNEVWHS = (dojo.byId("EVWHSyes").checked) ? "Yes":"No";
+	  var YNExistingProject = (dojo.byId("ExistingProjectYes").checked) ? "Yes":"No";
+	  var YNIncludesImgCost = (dojo.byId("IncludesCostYes").checked) ? "Yes":"No";
+	  
+	  //alert(parseFloat(dojo.byId("contractimgdollar").value)); 
+	  
+	  if (NoGraphic){
+	  alert("You must digitize your Area of Interest (AOI) on the map before continuing"); 
+	  return; 
+	  }
+	  
+	if (ChangedID != ""){
+	dojo.byId(ChangedID).style.border = "1px solid lightgray";
+	}		
+	  
+	  if (dojo.byId("name").value == ""){
+	  dojo.byId("name").style.border="2px solid red";
+	  dojo.byId("name").focus();
+	  ChangedID = "name"; 
+	  alert("Please enter the name of the AOR/COR."); 
+		
+	  return; 
+	  }
+	  else if (dojo.byId("email").value == ""){
+	  dojo.byId("email").style.border="2px solid red";
+	  dojo.byId("email").focus();
+	  ChangedID = "email"; 
+	  alert("Please enter an email for the AOR/COR."); 
+	  return; 
+	  }
+	  else if (dojo.byId("phone").value == ""){
+	  dojo.byId("phone").style.border="2px solid red";
+	  dojo.byId("phone").focus();
+	  ChangedID = "phone"; 
+	  alert("Please enter a phone number for the AOR/COR."); 
+	  return; 
+	  }
+	  else if (dojo.byId("unit").value == ""){
+	  dojo.byId("unit").style.border="2px solid red";
+	  dojo.byId("unit").focus();
+	  ChangedID = "unit"; 
+	  alert("Please enter the USAID Mission or Operating Unit supporting this request."); 
+	  return; 
+	  }
+	  else if (dojo.byId("IPPOC").value == ""){
+	  dojo.byId("IPPOC").style.border="2px solid red";
+	  dojo.byId("IPPOC").focus();
+	  ChangedID = "IPPOC"; 
+	  alert("Please enter the Implementing Partner point of contact."); 
+	  return; 
+	  }	   
+	  else if (dojo.byId("IPemail").value == ""){
+	  dojo.byId("IPemail").style.border="2px solid red";
+	  dojo.byId("IPemail").focus();
+	  ChangedID = "IPemail";
+	  alert("Please enter an email address for the Implementing Partner point of contact."); 
+	  return; 
+	  }
+	  else if (dojo.byId("IPphone").value == ""){
+	  dojo.byId("IPphone").style.border="2px solid red";
+	  dojo.byId("IPphone").focus();
+	  ChangedID = "IPphone"; 
+	  alert("Please enter a phone number for the Implementing Partner point of contact."); 
+	  return; 
+	  }
+	  else if (dojo.byId("company").value == ""){
+	  dojo.byId("company").style.border="2px solid red";
+	  dojo.byId("company").focus();
+	  ChangedID = "company"; 
+	  alert("Please enter the implementing partner's company name."); 
+	  return; 
+	  }
+	  else if (!dojo.byId("EVWHSyes").checked && !dojo.byId("EVWHSno").checked){
+	  dojo.byId("EVWHS").style.border="2px solid red";
+	  dojo.byId("EVWHSyes").focus(); 
+	  ChangedID = "EVWHS";
+	  alert("Please mark Yes/No to indicate if you have an existing EV-WHS account."); 
+	  return; 
+	  }
+	  else if (dojo.byId("title").value == ""){
+	  dojo.byId("title").style.border="2px solid red";
+	  dojo.byId("title").focus();
+	  ChangedID = "title"; 
+	  alert("Please enter the title of the contract/grant related to this image request."); 
+	  return; 
+	  }
+	  else if (dojo.byId("description").value == ""){
+	  dojo.byId("description").focus();
+	  ChangedID = "description"; 
+	  dojo.byId("description").style.border="2px solid red";
+	  alert("Please provide a description of the contract/grant related to this image request and mention how the imagery will be used."); 
+	  return; 
+	  }
+	  else if (!dojo.byId("ExistingProjectYes").checked && !dojo.byId("ExistingProjectNo").checked){
+	  dojo.byId("ExistingProject").style.border="2px solid red";
+	  dojo.byId("ExistingProjectYes").focus(); 
+	  ChangedID = "ExistingProject";
+	  alert("Please mark Yes/No to indicate if this image request is related to an existing USAID project."); 
+	  return; 
+	  }
+	  else if (!dojo.byId("IncludesCostYes").checked && !dojo.byId("IncludesCostNo").checked){
+	  alert("Please mark Yes/No to indicate whether the grant/contract had money earmarked for imagery."); 
+	  dojo.byId("IncludesCost").style.border="2px solid red";
+	  dojo.byId("IncludesCostYes").focus();
+	  ChangedID = "IncludesCost"; 
+	  return; 
+	  }
+	  else if (isNaN(dojo.byId("contractimgdollar").value)){
+	  dojo.byId("contractimgdollar").style.border="2px solid red";
+	  dojo.byId("contractimgdollar").focus();
+	  ChangedID = "contractimgdollar"; 
+	  alert("Please enter a numeric value with no special characters for the contract imagery dollar amount."); 
+	  return; 
+	  }
+	  else if (dojo.byId("time").value == ""){
+	  dojo.byId("timeperioddiv").style.border="2px solid red";
+	  dojo.byId("time").focus();
+	  ChangedID = "timeperioddiv"; 
+	  alert("Please select a period from which you want the imagery."); 
+	  return; 
+	  }
+	  else if (dojo.byId("country").value == ""){
+	  dojo.byId("CountryDiv").style.border="2px solid red";
+	  dojo.byId("country").focus(); 
+	  ChangedID = "CountryDiv";
+	  alert("Please select the country where the image is being requested from."); 
+	  return; 
+	  }
+	  else if (dojo.byId("impact").value == ""){
+	  dojo.byId("impact").focus();
+	  ChangedID = "impact"; 
+	  dojo.byId("impact").style.border="2px solid red";
+	  alert("Please provide information on how the imagery will be used to impact the project."); 
+	  return; 
+	  }
+	  else if (dojo.byId("due").value == ""){
+	  dojo.byId("duetime").style.border="2px solid red";
+	  dojo.byId("due").focus();
+	  ChangedID = "due"; 	  
+	  alert("Please enter the date of when you would like to have the imagery delivered by."); 
+	  return; 
+	  }
+	  
+	  if(dojo.byId("contractimgdollar").value == ""){
+	  //dojo.byId("contractimgdollar").style.border="3px solid red";
+	  dojo.byId("contractimgdollar").value = 0; 
+	  }
+	  
+	  var subGeometry = '{"geometry":{"rings":['+AllGeometries+'],"spatialReference":{"wkid":102100,"latestWkid":3857}}';
+	  //alert(subGeometry); 
+	 
+	  //+Date.UTC(dojo.byId("due").value.substring(0,4),dojo.byId("due").value.substring(5,7)-1,dojo.byId("due").value.substring(8,10))+
+	  //+Date.UTC(dojo.byId("date").value.substring(0,4),dojo.byId("date").value.substring(5,7)-1,dojo.byId("date").value.substring(8,10))+
+	  //alert(dojo.byId("due").value); 
+	  
+	  var theAttributes = '{"CORName":"'+dojo.byId("name").value+'","COREmail":"'+dojo.byId("email").value+'","CORPhone":"'+dojo.byId("phone").value+'","OP":"'+dojo.byId("unit").value+'","IPpoc":"'+dojo.byId("IPPOC").value+'","IPemail":"'+dojo.byId("IPemail").value+'","IPphone":"'+dojo.byId("IPphone").value+'","IPcompany":"'+dojo.byId("company").value+'","EVWHS":"'+YNEVWHS+'","Title":"'+dojo.byId("title").value+'","Description":"'+dojo.byId("description").value+'","ExProject":"'+YNExistingProject+'","ContractNum":"'+dojo.byId("contract").value+'","CostImage":"'+YNIncludesImgCost+'","ProjCostAmount":'+dojo.byId("contractimgdollar").value+',"Time":"'+dojo.byId("time").value+'","Country":"'+dojo.byId("country").value+'","Impact":"'+dojo.byId("impact").value+'","DueDate2":"'+dojo.date.locale.format(dijit.byId("due").value, {datePattern: "yyyy-MM-dd", selector: "date"})+'","Timestamp2":"'+TodaysDate+'","Status":"Submitted","FollowUp":"Not Initiated","AOISize":"Req: '+AllAreas+' Sq. KM; '+AllAreasCount+' polys","DeliveryDetails":null,"Sqr_KM":null,"Tot_Dollars":null}'; 
+	  
+	  var FinalAttributes = theAttributes.replace(/&/g, " and "); 
+	  var NumQuotes = FinalAttributes.match(/["]/g || []).length;
+	  //alert(NumQuotes); 
+		
+		if (NumQuotes > 96){
+		alert('The use of '+(NumQuotes - 96)+' double quotation marks (") were detected in your form fields. Please remove the quotes or replace the double quotes with single quotes (\'), and try re-submitting the form.'); 
+		
+		return; 
+		}
+
+	 
+	  var FinalString = 'f=json&adds='+'['+subGeometry +',"attributes":'+ FinalAttributes+"}]"; 
+	  //alert(FinalString); 
+	  FinalString = FinalString.replace(/(\r\n|\n|\r)/gm,"; ");
+	  //alert(FinalString);
+	  var EncodedString = encodeURI(FinalString); 
+	  //var EncodedString = FinalString;
+	  //alert(EncodedString); 
+	 
+	  //gGraphic.setAttributes(theAttributes);
+	  var xmlhttp=new XMLHttpRequest();
+	  xmlhttp.open("POST","INSERT URL Here",true);
+	  xmlhttp.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+	  xmlhttp.onreadystatechange = OnStateChange;
+	  xmlhttp.send(EncodedString);
+	  
+		  function OnStateChange(){
+		  
+		  if (xmlhttp.readyState == 4 && xmlhttp.status ==0) {
+		  alert("ERROR- The GIS Server cannot be reached. Please email this error message to the Remote Sensing Program at remotesensing@usaid.gov");
+		  }
+		  else if (xmlhttp.readyState == 4) {
+		  var rspobj = JSON.parse(xmlhttp.responseText);
+			  if(rspobj.error){
+				alert("ERROR- " + rspobj.error.message + ". Please email this error message to the Remote Sensing Program at remotesensing@usaid.gov"); 
+			  }
+			  else if(rspobj.addResults[0].success == true){
+				alert("Success! Your request has been received. Please email remotesensing@usaid.gov to confirm the request and to receive an estimated delivery date. \n\n In the email, please reference AOI number: "+ rspobj.addResults[0].objectId); 
+				location.reload();
+			  }
+			  else{
+			  alert("ERROR- It seems like there was a problem processing your request, although the exact error type is unknown. Please email this error message to the Remote Sensing Program at remotesensing@usaid.gov");
+			  }
+		  
+		  }
+		  }
+	  }
+	
+	
+      });	  
+	  
+//THIS FUNCTION CAPTURES A CUSTOM URL PARAMETER THAT ALLOWS USERS TO DIGITIZE A LARGER AIO FOOTPRINT. 	  
+function getParam (sname)
+{
+  var params = location.search.substr(location.search.indexOf("?")+1);
+  var sval = "";
+  params = params.split("&");
+    // split param and value into individual pieces
+    for (var i=0; i<params.length; i++)
+       {
+         temp = params[i].split("=");
+         if ( [temp[0]] == sname ) { sval = temp[1]; }
+       }
+  return sval;
+}
+	  	  
+	  
+	  
+	  
+    </script>
+	</head>
+	<body class="claro">
+		<div id="banner"> 
+			<img src="images/USAID_LAB_Red_Bar_Logo.jpg" id="labBanner"></img>
+		</div>
+		<div id="sidepanel">
+			<ul id="Navul">
+				<!--<li><img src="images/geocenterlogo.png" alt="GeoCenter Logo" id="logoDiv"></img></li><br><br>-->
+				<li class="li-sidepanel"><a href="index.html">Home</a></li>
+				<li class="li-sidepanel"><a href="About.html">About</a></li>
+				<li class="li-sidepanel"><a href="DatauseForm.html">Data Use Agreement</a></li>
+				<li class="li-sidepanel"><a href="NextView.html">NextView License</a></li>
+				<li class="li-sidepanel"><a href="AOIMap.html">Imagery Request Form</a></li>
+				<li class="li-sidepanel"><a href="Imagery.html">FAQ</a></li>
+				<br>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Ventures_Opt2_White.png" class="sidepanelimage3"></img><br>Innovation</p></li>
+				<li class="sidepanelimage"> <img src="images/WebsiteGraphic4.png" class="sidepanelimage2"></img><br>Technology</p></li>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Platforms_Opt3_White.png" class="sidepanelimage3"></img> <br>Platforms</p></li>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Partnerships_White.png" class="sidepanelimage3"></img> <br>Partnership </p></li>	
+			</ul>
+		</div>
+		<div id="mainbody"> 
+			
+		<h1>
+			<img src="images/geocenterlogo.png" alt="GeoCenter Logo" id="logoDiv2"> REMOTE SENSING PROGRAM
+		</h1>
+		<h2> Imagery Request Form </h2>
+		<p id="p">
+			Fill out the form below and draw your area of interest (AOI) then click the submit button to submit your imagery request.   <!--Otherwise, send your AOI shapefile or KML to remotesensing@usaid.gov.-->
+		</p>
+		<form id="imageryform" method="get" action="">
+
+
+
+
+<div data-role="header" id="formheaders">
+  <h2 class="formheaders">USAID Information</h2>
+  </div>
+  <div class="ui-field-contain">
+    <label for="name">USAID AOR/COR Name</label>
+    <input type="text" name="text" id="name" value="" maxlength="99" placeholder="John Smith">
+    </div>
+	
+  <div class="ui-field-contain">
+    <label for="email">AOR/COR Email</label>
+    <input type="text" name="text" id="email" value="" maxlength="99" placeholder="name@usaid.gov">
+    </div>
+	
+  <div class="ui-field-contain">
+    <label for="phone">AOR/COR Phone</label>
+    <input type="text" name="text" id="phone" value="" maxlength="49" placeholder="xxx-xxx-xxxx">
+    </div>
+    
+  <div class="ui-field-contain">
+    <label for="unit">USAID Mission / Operating Unit</label>
+    <input type="text" name="text" id="unit" value="" maxlength="99" placeholder="USAID Honduras">
+    </div>
+
+  <div data-role="header" id="formheaders">
+  <h2 class="formheaders">Implementing Partner Information </h2>
+  </div>
+	
+  <div class="ui-field-contain">
+    <label for="IPPOC">Implementing Partner Point of Contact</label>
+    <input type="text" name="text" id="IPPOC" value="" maxlength="99" placeholder="John Smith">
+    </div>
+	
+  <div class="ui-field-contain">
+    <label for="IPemail">Implementing Partner Email</label>
+    <input type="text" name="text" id="IPemail" value="" maxlength="99" placeholder="jsmith@domain.com">
+    </div>
+	
+  <div class="ui-field-contain">
+    <label for="IPphone">Implementing Partner Phone</label>
+    <input type="text" name="text" id="IPphone" value="" maxlength="49" placeholder="xxx-xxx-xxx">
+    </div>
+  
+  <div class="ui-field-contain">
+    <label for="company">Implementing Partner Company</label>
+    <input type="text" name="text" id="company" value="" maxlength="99" placeholder="CRS">
+    </div> 
+  
+  <div class="ui-field-contain">
+	<div id="EVWHS">
+    <fieldset data-role="controlgroup" data-type="horizontal" >
+		<legend>Does your organization currently have access to EV-WHS?</legend>
+		
+			<input type="radio" name="radio-choice-3" id="EVWHSyes" value="Yes" />
+			<label for="EVWHSyes">Yes</label>
+			<input type="radio" name="radio-choice-3" id="EVWHSno" value="No" />
+			<label for="EVWHSno">No</label>
+		
+    </fieldset>
+	</div>
+  </div> 
+  
+  <div data-role="header" id="formheaders">
+	<h2 class="formheaders">Project Information</h2>
+  </div>
+  
+  <div class="ui-field-contain">
+    <label for="title">Project Title</label>
+    <input type="text" name="text" id="title" value="" maxlength="149" placeholder="Title">
+    </div>
+  
+  <div class="ui-field-contain">
+    <label for="description">Project Description</label>
+	<textarea name="addinfo" id="description" placeholder="3-5 Sentences"></textarea>
+    </div>
+  <div class="ui-field-contain">
+	<div id="ExistingProject">
+	<fieldset data-role="controlgroup" data-type="horizontal">
+    	<legend>Is this an Existing USAID project? </legend>
+			
+         	<input type="radio" name="radio-choice-1" id="ExistingProjectYes" value="Yes" />
+         	<label for="ExistingProjectYes">Yes</label>
+
+         	<input type="radio" name="radio-choice-1" id="ExistingProjectNo" value="No"  />
+         	<label for="ExistingProjectNo">No</label>
+			
+    </fieldset>
+	</div>
+	</div>
+  <div class="ui-field-contain">
+    <label for="title">If Yes, then please provide contract number</label>
+    <input type="text" name="text" id="contract" value="" maxlength="99" placeholder="contractNumber">
+    </div>
+  <div class="ui-field-contain">
+	<div id="IncludesCost">
+	<fieldset data-role="controlgroup" data-type="horizontal">
+    	<legend>Does the contract include costs for imagery? </legend>
+			
+         	<input type="radio" name="radio-choice-2" id="IncludesCostYes" value="Yes" />
+         	<label for="IncludesCostYes">Yes</label>
+
+         	<input type="radio" name="radio-choice-2" id="IncludesCostNo" value="No"  />
+         	<label for="IncludesCostNo">No</label>
+			
+    </fieldset>
+	</div>
+	</div>	
+  <div class="ui-field-contain">
+    <label for="title">If Yes, please provide a dollar amount</label>
+    <input type="text" name="text" id="contractimgdollar" value=""  placeholder="$">
+    </div>
+  <div class="ui-field-contain">
+    <label for="time">From what time period do you want the imagery?</label>
+	<div id="timeperioddiv">
+    <select name="timeperiod" id="time">
+		<option value=''></option>
+		<option value='Most Recent Available'>Most Recent Available</option>
+		<option value='Last 6 Months'>Last 6 Months</option>
+		<option value='Last Year'>Last Year</option>
+		<option value='Last Two Years'>Last Two Years</option>
+		<option value='Older Than Two Years'>Older Than Two Years</option>
+		<option value='Other'>Other (Ensure Image Timeframe is Mentioned in Project Description Field)</option>
+	</select>
+	</div>
+    </div>
+  <div data-role="fieldcontain">
+	   <label for="country" class="select">Country:</label>
+	   <div id="CountryDiv">
+	   <select name="country" id="country">
+	    <option value=''></option>
+		<option value='Afghanistan'>Afghanistan</option>
+		<option value='Albania'>Albania</option>
+		<option value='Algeria'>Algeria</option>
+		<option value='Angola'>Angola</option>
+		<option value='Antigua and Barbuda'>Antigua and Barbuda</option>
+		<option value='Armenia'>Armenia</option>
+		<option value='Azerbaijan'>Azerbaijan</option>
+		<option value='Bangladesh'>Bangladesh</option>
+		<option value='Barbados'>Barbados</option>
+		<option value='Belarus'>Belarus</option>
+		<option value='Benin'>Benin</option>
+		<option value='Bosnia and Herzegovina'>Bosnia and Herzegovina</option>
+		<option value='Botswana'>Botswana</option>
+		<option value='Brazil'>Brazil</option>
+		<option value='Bulgaria'>Bulgaria</option>
+		<option value='Burkina Faso'>Burkina Faso</option>
+		<option value='Burma'>Burma</option>
+		<option value='Burundi'>Burundi</option>
+		<option value='Cambodia'>Cambodia</option>
+		<option value='Cameroon'>Cameroon</option>
+		<option value='Cape Verde'>Cape Verde</option>
+		<option value='Central African Republic'>Central African Republic</option>
+		<option value='Chad'>Chad</option>
+		<option value='China'>China</option>
+		<option value='Colombia'>Colombia</option>
+		<option value='Costa Rica'>Costa Rica</option>
+		<option value='Cote d'Ivoire'>Cote d'Ivoire</option>
+		<option value='Cuba'>Cuba</option>
+		<option value='Cyprus'>Cyprus</option>
+		<option value='Democratic Republic of the Congo'>Democratic Republic of the Congo</option>
+		<option value='Djibouti'>Djibouti</option>
+		<option value='Dominica'>Dominica</option>
+		<option value='Dominican Republic'>Dominican Republic</option>
+		<option value='Ecuador'>Ecuador</option>
+		<option value='Egypt'>Egypt</option>
+		<option value='El Salvador'>El Salvador</option>
+		<option value='Equatorial Guinea'>Equatorial Guinea</option>
+		<option value='Ethiopia'>Ethiopia</option>
+		<option value='Federated States of Micronesia'>Federated States of Micronesia</option>
+		<option value='Fiji'>Fiji</option>
+		<option value='Gabon'>Gabon</option>
+		<option value='Gambia'>Gambia</option>
+		<option value='Georgia'>Georgia</option>
+		<option value='Ghana'>Ghana</option>
+		<option value='Grenada'>Grenada</option>
+		<option value='Guatemala'>Guatemala</option>
+		<option value='Guinea'>Guinea</option>
+		<option value='Guyana'>Guyana</option>
+		<option value='Haiti'>Haiti</option>
+		<option value='Honduras'>Honduras</option>
+		<option value='India'>India</option>
+		<option value='Indonesia'>Indonesia</option>
+		<option value='Iraq'>Iraq</option>
+		<option value='Jamaica'>Jamaica</option>
+		<option value='Jordan'>Jordan</option>
+		<option value='Kazakhstan'>Kazakhstan</option>
+		<option value='Kenya'>Kenya</option>
+		<option value='Kiribati'>Kiribati</option>
+		<option value='Kosovo'>Kosovo</option>
+		<option value='Kyrgyzstan'>Kyrgyzstan</option>
+		<option value='Laos'>Laos</option>
+		<option value='Lebanon'>Lebanon</option>
+		<option value='Lesotho'>Lesotho</option>
+		<option value='Liberia'>Liberia</option>
+		<option value='Libya'>Libya</option>
+		<option value='Macedonia'>Macedonia</option>
+		<option value='Madagascar'>Madagascar</option>
+		<option value='Malawi'>Malawi</option>
+		<option value='Maldives'>Maldives</option>
+		<option value='Mali'>Mali</option>
+		<option value='Marshall Islands'>Marshall Islands</option>
+		<option value='Mauritania'>Mauritania</option>
+		<option value='Mexico'>Mexico</option>
+		<option value='Moldova'>Moldova</option>
+		<option value='Mongolia'>Mongolia</option>
+		<option value='Montenegro'>Montenegro</option>
+		<option value='Morocco'>Morocco</option>
+		<option value='Mozambique'>Mozambique</option>
+		<option value='Namibia'>Namibia</option>
+		<option value='Nauru'>Nauru</option>
+		<option value='Nepal'>Nepal</option>
+		<option value='Nicaragua'>Nicaragua</option>
+		<option value='Niger'>Niger</option>
+		<option value='Nigeria'>Nigeria</option>
+		<option value='Pakistan'>Pakistan</option>
+		<option value='Palau'>Palau</option>
+		<option value='Panama'>Panama</option>
+		<option value='Papua New Guinea'>Papua New Guinea</option>
+		<option value='Paraguay'>Paraguay</option>
+		<option value='Peru'>Peru</option>
+		<option value='Philippines'>Philippines</option>
+		<option value='Republic of the Congo'>Republic of the Congo</option>
+		<option value='Rwanda'>Rwanda</option>
+		<option value='Samoa'>Samoa</option>
+		<option value='Senegal'>Senegal</option>
+		<option value='Serbia'>Serbia</option>
+		<option value='Sierra Leone'>Sierra Leone</option>
+		<option value='Solomon Islands'>Solomon Islands</option>
+		<option value='Somalia'>Somalia</option>
+		<option value='South Africa'>South Africa</option>
+		<option value='South Sudan'>South Sudan</option>
+		<option value='Sri Lanka'>Sri Lanka</option>
+		<option value='St Kitts and Nevis'>St Kitts and Nevis</option>
+		<option value='St Lucia'>St Lucia</option>
+		<option value='St Vincent and the Grenadines'>St Vincent and the Grenadines</option>
+		<option value='Sudan'>Sudan</option>
+		<option value='Suriname'>Suriname</option>
+		<option value='Swaziland'>Swaziland</option>
+		<option value='Syria'>Syria</option>
+		<option value='Tajikistan'>Tajikistan</option>
+		<option value='Tanzania'>Tanzania</option>
+		<option value='Thailand'>Thailand</option>
+		<option value='Timor-Leste'>Timor-Leste</option>
+		<option value='Togo'>Togo</option>
+		<option value='Tonga'>Tonga</option>
+		<option value='Trinidad and Tobago'>Trinidad and Tobago</option>
+		<option value='Tunisia'>Tunisia</option>
+		<option value='Turkmenistan'>Turkmenistan</option>
+		<option value='Tuvalu'>Tuvalu</option>
+		<option value='Uganda'>Uganda</option>
+		<option value='Ukraine'>Ukraine</option>
+		<option value='Uzbekistan'>Uzbekistan</option>
+		<option value='Vanuatu'>Vanuatu</option>
+		<option value='Vietnam'>Vietnam</option>
+		<option value='West Bank-Gaza'>West Bank-Gaza</option>
+		<option value='Yemen'>Yemen</option>
+		<option value='Zambia'>Zambia</option>
+		<option value='Zimbabwe'>Zimbabwe</option>
+
+	   </select>
+	   </div>
+	</div>	
+  <div class="ui-field-contain">
+    <label for="impact">How will imagery be used to impact the project?</label>
+	<textarea name="addinfo" id="impact" placeholder="E.g. cost saving, improved understanding, M&E"></textarea>
+    </div>
+
+  
+  <div id="duetime" class="ui-field-contain">
+    <label for="due">When would you need the imagery delivered by?</label>
+	
+    <input type="text" name="due" id="due" data-dojo-type="dijit/form/DateTextBox">
+  </div>
+  
+
+  <div data-role="header" style="text-align:center" id="formheaders">
+  <h2 class="formheaders">Area of Interest- Digitize one or multiple areas of <br>interest on the map below</h2><input type="button" name="SubmitButton" id="SubmitBtn" value="Submit Form">&nbsp;&nbsp;
+  </div>
+
+  <div id="search"></div>  
+<div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'"><span id="info" ></span></div>
+
+
+
+
+  </form>
+		
+		</div>
+	</body>
+</html>

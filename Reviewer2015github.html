@@ -1,0 +1,705 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title>AOI Review Tool</title>    
+    <link rel="stylesheet" href="http://js.arcgis.com/3.11/dojo/resources/dojo.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.11/dijit/themes/claro/claro.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.11/dgrid/css/dgrid.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.11/esri/css/esri.css">
+    <style>
+      body,html,#main{
+        margin:0;
+        padding:2px;
+        height:100%;
+        width:100%;
+        font: 16px Geneva, Arial, Helvetica, sans-serif;
+      }
+      #map{
+        padding:0;
+        border: 1px solid #b5bcc7;
+      }
+	  #HomeButton {
+      position: absolute;
+      top: 90px;
+      left: 18px;
+      z-index: 50;
+}
+      .dgrid { border: none; height: 100%; font: 12px Geneva, Arial, Helvetica, sans-serif;}
+      .dgrid-column-0 {
+        width: 35px;
+      }
+	  .dgrid-header{
+	    background: #6C6D71;
+	  }
+      .dgrid-row-odd {
+        background: #AFCAE8;
+      }
+      td div img:hover {
+        cursor: pointer;
+      }
+    </style>    
+    <script src="http://js.arcgis.com/3.11/"></script>
+    <script>
+      var map, grid;
+	  
+	  var columns2;
+	  
+	  var statesLayer; 
+	  
+	  var popup;
+
+    /*
+    optional:
+    1. make field heading color rusty brown (and white on hover)
+    2. make sure odd selected rows turn blue too
+    3. figure out how to make zoom label the image (can't inject button in the constructor)
+    */
+      require([
+        "esri/map", "esri/layers/FeatureLayer", "esri/symbols/SimpleFillSymbol", "esri/symbols/SimpleLineSymbol", "esri/tasks/QueryTask",
+        "esri/tasks/query", "esri/Color", "dgrid/editor", "dgrid/Keyboard", "dgrid/Selection",
+        "dgrid/OnDemandGrid", "dgrid/Selection", "dgrid/extensions/ColumnResizer", "dojo/store/Memory",
+        "dojo/_base/array", "dojo/dom", "dijit/form/Button",
+        "dojo/parser", "dojo/_base/declare","esri/dijit/HomeButton", "esri/renderers/SimpleRenderer", 
+		"esri/dijit/Popup", "esri/dijit/PopupTemplate", "dojo/dom-class", "dojo/dom-construct",  "esri/geometry/webMercatorUtils",
+		"esri/dijit/editing/Editor", "esri/graphic", "dojo/date/locale",
+
+        "dijit/layout/BorderContainer", "dijit/layout/ContentPane", "dojo/domReady!"
+      ], function(
+        Map, FeatureLayer, SimpleFillSymbol, SimpleLineSymbol, QueryTask,
+        Query, Color, GridEditor, Keyboard, Selection,
+        Grid,  Selection, ColumnResizer, Memory,
+        array, dom, Button,
+        parser, declare, HomeButton, SimpleRenderer, Popup, PopupTemplate, domClass, domConstruct,webMercatorUtils,  Editor, Graphic, locale
+      ) {
+
+        parser.parse();
+
+		
+        var StatesGrid = declare([Grid, ColumnResizer]);
+
+        var columns = [{
+          label: "",  //wasn't able to inject an HTML <div> with image here
+          field: "OBJECTID",
+          formatter: makeZoomButton
+        }, {
+          label: "IP POC",
+          field: "IPpoc",
+		  editor: "textbox"
+        }, {
+          label: "Implementing Partner",
+          field: "IPcompany"
+        }, {
+          label: "Project Title",
+          field: "Title"
+        },  {
+          label: "Due Date",
+          field: "DueDate2"
+        }, {
+          label: "Submit Date",
+          field: "Timestamp2"
+        }, 	{
+          label: "Status",
+          field: "Status",
+		  editor: "textbox"
+        }, 
+		{
+          label: "Req. AOI Size",
+          field: "AOISize"
+        }];
+		
+
+
+        //restrict sorting to the state name field
+        //for (var i = 0; i < columns.length; i++) {
+        //  if (i == 1) {
+        //    columns[i].sortable = true;
+        //  } else {
+        //    columns[i].sortable = false;
+        //  }
+        //}
+
+        grid = new StatesGrid({
+          bufferRows: Infinity,
+          columns: columns
+        }, "grid");
+		
+
+        map = new Map("map", {
+          basemap: "gray",
+          center: [0, 0],
+          zoom: 3
+        });
+		
+		map.on("load", function() {
+          //after map loads, connect to listen to mouse move & drag events
+          map.on("mouse-move", showCoordinates);
+          map.on("mouse-drag", showCoordinates);
+        });
+
+        function showCoordinates(evt) {
+          //the map is in web mercator but display coordinates in geographic (lat, long)
+          var mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint);
+          //display mouse coordinates
+          dom.byId("info").innerHTML = mp.x.toFixed(3) + ", " + mp.y.toFixed(3);
+        };
+		//map.on("resize", function(){
+		//alert("map resized");
+		//map.resize(); 
+		//});
+		
+		  var home = new HomeButton({
+		  map: map
+          }, "HomeButton");
+          home.startup();
+		  
+		   var fill = new SimpleFillSymbol("solid", null, new Color("#A4CE67"));
+        popup = new Popup({
+            fillSymbol: fill,
+            titleInBody: false
+        }, domConstruct.create("div"));
+		  
+		  var template = new PopupTemplate({
+          title: "Selected AOI: {OBJECTID}",
+          description: "<table border='1'><tr><td>Requestee:</td><td>{IPpoc}</td></tr><tr><td>IP:</td><td>{IPcompany}</td></tr><tr><td>Project Name:</td><td>{Title}</td></tr><tr><td>Date Submitted:</td><td>{Timestamp2}</td></tr><tr><td>Due Date:</td><td>{DueDate2}</td></tr><tr><td>Size:</td><td>{AOISize}</td></tr><tr><td>Status </td><td>{Status}</td></tr></table><br><button onclick='deleteFeature({OBJECTID});'>Delete</button>"
+		  });
+		  
+		  //map.on("click", function(){
+		  //alert(columns);
+		  //UpdateColumns(); 
+		  //});		  
+
+        //add the states demographic data
+        statesLayer = new FeatureLayer("INSERT URL HERE", {
+          mode: FeatureLayer.MODE_SNAPSHOT,
+          outFields: ["*"],
+		  infoTemplate: template
+        });
+		
+		var queryTask = new QueryTask("INSERT URL HERE");
+
+        //define a regular symbol
+        //var regularSymbol = new SimpleFillSymbol().setColor(new Color([225, 225, 225, 0.25]));
+		//var renderer = new SimpleRenderer(regularSymbol);
+		//statesLayer.setRenderer(renderer);
+        //statesLayer.setSelectionSymbol(regularSymbol);
+
+        //define a selection symbol
+        var highlightSymbol = new SimpleFillSymbol();
+		highlightSymbol.setColor(new Color([0,0,0,1]));
+		//highlightSymbol.setStyle(esri.symbol.SimpleLineSymbol.STYLE_FORWARD_DIAGONAL);
+		highlightSymbol.setOutline(new SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new Color([255,0,0]), 2));
+        statesLayer.setSelectionSymbol(highlightSymbol);
+
+   
+		statesLayer.on("load", function(evt) {
+          var query = new Query();
+          query.where = "1=1";
+          evt.layer.queryFeatures(query, function(featureSet) {
+            var items = array.map(featureSet.features, function(feature) {
+              return feature.attributes;
+            });
+
+            //idProperty must be set manually if value is something other than 'id'
+            var memStore = new Memory({
+              data: items,
+              idProperty: "OBJECTID"
+            });
+            window.grid.set("store", memStore);
+            window.grid.set("sort", "AOI_Num");
+
+            grid.on(".field-OBJECTID:click", function(e) {
+              //retrieve the ObjectId when someone clicks on the magnifying glass
+              if (e.target.alt) {
+                zoomRow(e.target.alt);
+              }
+            });
+          });
+        });
+		
+		
+
+		
+		
+		    statesLayer.on("edits-complete", function(evt) {
+			//map.graphics.clear(); 
+			map.infoWindow.hide(); 
+			
+          var query = new Query();
+          query.where = "1=1";
+          statesLayer.queryFeatures(query, function(featureSet) {
+            var items = array.map(featureSet.features, function(feature) {
+              return feature.attributes;
+            });
+
+            //idProperty must be set manually if value is something other than 'id'
+            var memStore = new Memory({
+              data: items,
+              idProperty: "OBJECTID"
+            });
+            window.grid.set("store", memStore);
+            window.grid.set("sort", "AOI_Num");
+
+            grid.on(".field-OBJECTID:click", function(e) {
+              //retrieve the ObjectId when someone clicks on the magnifying glass
+              if (e.target.alt) {
+                zoomRow(e.target.alt);
+              }
+            });
+          });
+        });
+		
+        map.addLayers([statesLayer]);
+		
+		function zoomRow(id) {
+		  dojo.byId("UpdatedOIDTB").value = id; 
+          statesLayer.clearSelection();
+          var query = new Query();
+          query.objectIds = [id];
+          statesLayer.selectFeatures(query, FeatureLayer.SELECTION_NEW, function(features) {
+            //zoom to the selected feature
+			if (features[0].attributes.Status == "In Progress"){dojo.byId('StatusDD').selectedIndex = 1;}
+			else if (features[0].attributes.Status == "Complete"){dojo.byId('StatusDD').selectedIndex = 2;}
+			else if (features[0].attributes.Status == "Problem"){dojo.byId('StatusDD').selectedIndex = 3;}
+			else{dojo.byId('StatusDD').selectedIndex = 0;}
+			dojo.byId('UpdatedSqKm').value = features[0].attributes.Sqr_KM;
+			if(features[0].attributes.DeliveryDate != null){
+			//alert(features[0].attributes.DeliveryDate.substring(5,7)+"/"+features[0].attributes.DeliveryDate.substring(8,10)+"/"+features[0].attributes.DeliveryDate.substring(0,4)); 
+			//alert(features[0].attributes.DeliveryDate); 
+			dojo.byId('UpdatedDelivDt').value = features[0].attributes.DeliveryDate.substring(5,7)+"/"+features[0].attributes.DeliveryDate.substring(8,10)+"/"+features[0].attributes.DeliveryDate.substring(0,4);
+			}
+			dojo.byId('UpdatedImgVal').value = features[0].attributes.Tot_Dollars;
+			dojo.byId('UpdatedDeliveryNotes').value = features[0].attributes.DeliveryDetails;
+            dojo.byId('UpdatedGeoAnalyst').value = features[0].attributes.GeoAnalyst;
+			if (features[0].attributes.FollowUp == "Not Initiated"){dojo.byId('UpdatedFollowup').selectedIndex = 1;}
+			else if (features[0].attributes.FollowUp == "Initiated"){dojo.byId('UpdatedFollowup').selectedIndex = 2;}
+			else if (features[0].attributes.FollowUp == "Response Received"){dojo.byId('UpdatedFollowup').selectedIndex = 3;}
+			else if (features[0].attributes.FollowUp == "Follow-up Failed"){dojo.byId('UpdatedFollowup').selectedIndex = 4;}
+			else{dojo.byId('UpdatedFollowup').selectedIndex = 0;}
+			
+			var stateExtent = features[0].geometry.getExtent().expand(5.0);
+            map.setExtent(stateExtent);
+          });
+        }
+
+
+		}); 
+
+	  		function deleteFeature(DelID){
+			
+			require([
+        "esri/layers/FeatureLayer",
+        "esri/tasks/query", "dgrid/Selection", "dojo/domReady!"
+      ], function(
+        FeatureLayer,
+        Query, 
+		Selection
+      ) {
+			
+		var cnfm = confirm("Are you sure you want to delete feature " + DelID); 
+		
+		if(cnfm){
+		var selectQuery = new Query();
+		selectQuery.where = "OBJECTID = " + DelID; 
+		statesLayer.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function(features) {
+			//alert(features[0].attributes["FID"]);
+			//alert(features.length); 
+			statesLayer.applyEdits(null, null, [features[0]]); 
+			dojo.byId('UpdatedOIDTB').value = ""; 
+			//location.reload(); 			
+			//statesLayer.clearSelection(); 
+					
+		});	
+		} 
+		
+		});
+		}
+		
+		
+		
+		function ModFeature(){
+		//alert("Modifying feature"); 
+		
+		if(dojo.byId('UpdatedOIDTB').value == ""){
+			alert("Error- No selected feature");
+			return; 
+		}
+		
+		var ModID = dojo.byId('UpdatedOIDTB').value;
+			
+		//alert(dojo.byId('StatusDD').options[dojo.byId('StatusDD').selectedIndex].value); 
+		//alert(dojo.byId('UpdatedDelivDt').value); 
+		//alert(dojo.byId('UpdatedSqKm').value); 
+		//alert(dojo.byId('UpdatedImgVal').value); 
+			
+			
+			require([
+        "esri/layers/FeatureLayer",
+        "esri/tasks/query", "dgrid/Selection", "dojo/domReady!"
+      ], function(
+        FeatureLayer,
+        Query, 
+		Selection
+      ) {
+			 
+		var selectQuery = new Query();
+		selectQuery.where = "OBJECTID = " + ModID; 
+		statesLayer.selectFeatures(selectQuery, FeatureLayer.SELECTION_NEW, function(features) {
+			//alert(features[0].attributes["FID"]);
+			//features[0].attributes.Status = "Clicked On!"
+			
+			if(dojo.byId('StatusDD').options[dojo.byId('StatusDD').selectedIndex].value != ""){
+			//alert("value here1"); 
+			features[0].attributes.Status = dojo.byId('StatusDD').options[dojo.byId('StatusDD').selectedIndex].value; 
+			}
+			if(dojo.byId('UpdatedDelivDt').value != ""){
+			//alert("value here2");
+			//features[0].attributes.DeliveryDate = dojo.byId('UpdatedDelivDt').value; 
+			features[0].attributes.DeliveryDate = dojo.date.locale.format(dijit.byId("UpdatedDelivDt").value, {datePattern: "yyyy-MM-dd", selector: "date"})
+			}
+			if(dojo.byId('UpdatedSqKm').value != ""){
+			//alert("value here3");
+			features[0].attributes.Sqr_KM = dojo.byId('UpdatedSqKm').value;
+			}
+			if(dojo.byId('UpdatedImgVal').value != ""){
+			//alert("value here4"); 
+			features[0].attributes.Tot_Dollars = dojo.byId('UpdatedImgVal').value; 
+			}
+			if(dojo.byId('UpdatedDeliveryNotes').value != ""){
+			//alert("value here5"); 
+			features[0].attributes.DeliveryDetails = dojo.byId('UpdatedDeliveryNotes').value; 
+			}
+			if(dojo.byId('UpdatedGeoAnalyst').value != ""){
+			//alert("value here3");
+			features[0].attributes.GeoAnalyst = dojo.byId('UpdatedGeoAnalyst').value;
+			}
+			if(dojo.byId('UpdatedFollowup').options[dojo.byId('UpdatedFollowup').selectedIndex].value != ""){
+			//alert("value here1"); 
+			features[0].attributes.FollowUp = dojo.byId('UpdatedFollowup').options[dojo.byId('UpdatedFollowup').selectedIndex].value; 
+			}
+			//alert(features[0].attributes.Title);
+			
+			
+			//alert(features.length); 
+			statesLayer.applyEdits(null, [features[0]], null); 
+			
+			dojo.byId('UpdatedOIDTB').value = ""; 
+			dojo.byId('StatusDD').selectedIndex = 0; 
+			dojo.byId('UpdatedDelivDt').value = ""; 
+			dojo.byId('UpdatedSqKm').value = "";  
+			dojo.byId('UpdatedImgVal').value = "";  
+			dojo.byId('UpdatedDeliveryNotes').value = ""; 
+			dojo.byId('UpdatedGeoAnalyst').value = ""; 
+			dojo.byId('UpdatedFollowup').selectedIndex = 0;
+		
+			//location.reload(); 			
+			statesLayer.clearSelection(); 
+			var stateExtent = features[0].geometry.getExtent().expand(5.0);
+			map.setExtent(stateExtent);
+					
+		});	
+		
+		});
+		}
+		
+		
+		function makeZoomButton(id) {
+          //set the feature 'id' as the alt value for the image so that it can be used to query below
+          var zBtn = "<div data-dojo-type='dijit/form/Button'><img src='zoom.png' alt='" + id + "'";
+          zBtn = zBtn + " width='18' height='18'></div>"+id;
+          return zBtn;
+        }
+		
+		function UpdateColumns(){
+		  var colob; 
+		  var columns3 = [{
+          label: "",  //wasn't able to inject an HTML <div> with image here
+          field: "OBJECTID",
+          formatter: makeZoomButton
+        }];
+		
+		
+			if(dojo.byId('AOR COR Name').checked){
+			colob = {label: "AOR/COR Name", field: "CORName"};
+			columns3.push(colob);}
+
+			if(dojo.byId('AOR COR Email').checked){
+			colob = {label: "AOR/COR Email", field: "COREmail"};
+			columns3.push(colob);}
+
+			if(dojo.byId('AOR COR Phone').checked){
+			colob = {label: "AOR/COR Phone", field: "CORPhone"};
+			columns3.push(colob);}
+
+			if(dojo.byId('USAID Mission OU').checked){
+			colob = {label: "Operating Unit", field: "OP"};
+			columns3.push(colob);}
+
+			if(dojo.byId('IP POC').checked){
+			colob = {label: "IP POC", field: "IPpoc"};
+			columns3.push(colob);}
+
+			if(dojo.byId('IP Email').checked){
+			colob = {label: "IP Email", field: "IPemail"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('IP Phone').checked){
+			colob = {label: "IP Phone", field: "IPphone"};
+			columns3.push(colob);}
+
+			if(dojo.byId('IP Company').checked){
+			colob = {label: "Implementing Partner", field: "IPcompany"};
+			columns3.push(colob);}
+
+			if(dojo.byId('Proj Title').checked){
+			colob = {label: "Project Title", field: "Title"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Proj Description').checked){
+			colob = {label: "Project Description", field: "Description"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Existing Project').checked){
+			colob = {label: "Is Existing Contract?", field: "ExProject"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Contract Number').checked){
+			colob = {label: "Contract Number", field: "ContractNum"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Cost Image').checked){
+			colob = {label: "Contract Had Img. Cost?", field: "CostImage"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Cost Image Amount').checked){
+			colob = {label: "Img. Val in Contract", field: "ProjCostAmount"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Time Period').checked){
+			colob = {label: "Time Period", field: "Time"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Country').checked){
+			colob = {label: "Country", field: "Country"};
+			columns3.push(colob);}
+
+			if(dojo.byId('Impact').checked){
+			colob = {label: "Impact", field: "Impact"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('HasEVWHS').checked){
+			colob = {label: "Has EV-WHS", field: "EVWHS"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('DueDate').checked){
+			colob = {label: "Due Date", field: "DueDate2"};
+			columns3.push(colob);}
+
+			if(dojo.byId('Submit Date').checked){
+			colob = {label: "Submit Date", field: "Timestamp2"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Delivery Date').checked){
+			colob = {label: "Delivery Date", field: "DeliveryDate"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Status').checked){
+			colob = {label: "Status", field: "Status",editor: "text"};
+			columns3.push(colob);}
+
+			if(dojo.byId('AOISize').checked){
+			colob = {label: "Req. AOI Size", field: "AOISize"};
+			columns3.push(colob);}
+
+			if(dojo.byId('Delivery Details').checked){
+			colob = {label: "Delivery Details", field: "DeliveryDetails"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('Sqr_KM').checked){
+			colob = {label: "Sqr KM", field: "Sqr_KM"};
+			columns3.push(colob);}
+
+			if(dojo.byId('Tot_Dollars').checked){
+			colob = {label: "Img. Value", field: "Tot_Dollars"};
+			columns3.push(colob);}
+			
+			if(dojo.byId('GeoAnalyst').checked){
+			colob = {label: "Geo Analyst", field: "GeoAnalyst"};
+			columns3.push(colob);}
+		  
+		    if(dojo.byId('FollowupInit').checked){
+			colob = {label: "Follow-up Init.", field: "FollowUp"};
+			columns3.push(colob);}
+		  
+		  window.grid.set("columns", columns3);
+		  
+		  }
+		
+		function UpdateFilter(){
+		//alert("Filtering Layers"); 
+		var NumShow = 0; 
+		var DefQuery = "" 
+		if(dojo.byId('ShowSubmitted').checked){
+			DefQuery = "Status = 'Submitted'"
+			NumShow++; 
+		}
+		if(dojo.byId('ShowInProgress').checked){
+			if(NumShow > 0){DefQuery += " OR ";}
+			DefQuery += "Status = 'In Progress'"
+			NumShow++; 
+		}
+		if(dojo.byId('ShowProblem').checked){
+			if(NumShow > 0){DefQuery += " OR ";}
+			DefQuery += "Status = 'Problem'"
+			NumShow++; 
+		}
+		if(dojo.byId('ShowComplete').checked){
+			if(NumShow > 0){DefQuery += " OR ";}
+			DefQuery += "Status = 'Complete'"
+			NumShow++; 
+		}
+		if(NumShow ==0){
+		alert("You need to select at least one filter criteria"); 
+		return; 
+		} 
+		NumShow = 0;
+		
+		require([
+        "esri/layers/FeatureLayer", 
+        "esri/tasks/query", "dgrid/Selection", "dojo/domReady!"
+      ], function(
+        FeatureLayer,
+        Query, 
+		Selection
+      ) {
+	    statesLayer.clearSelection();
+		statesLayer.setDefinitionExpression(DefQuery);
+				
+		
+		});
+		
+		UpdateDataGrid();
+		
+		}
+		
+		function UpdateDataGrid() {
+			//map.graphics.clear(); 
+			//map.infoWindow.hide(); 
+			
+		require([
+        "esri/layers/FeatureLayer", "dojo/store/Memory",
+        "esri/tasks/query", "dgrid/Selection", "dojo/domReady!"
+      ], function(
+        FeatureLayer, Memory,
+        Query, 
+		Selection
+      ) {
+		
+          var query = new Query();
+          query.where = "1=1";
+          statesLayer.queryFeatures(query, function(featureSet) {
+            var items = dojo.map(featureSet.features, function(feature) {
+              return feature.attributes;
+            });
+
+            //idProperty must be set manually if value is something other than 'id'
+            var memStore = new Memory({
+              data: items,
+              idProperty: "OBJECTID"
+            });
+            window.grid.set("store", memStore);
+            window.grid.set("sort", "AOI_Num");
+
+            //grid.on(".field-OBJECTID:click", function(e) {
+              //retrieve the ObjectId when someone clicks on the magnifying glass
+            //  if (e.target.alt) {
+            //    zoomRow(e.target.alt);
+            //  }
+            //});
+          });
+		  });
+		 	
+        }
+		
+		function UpdateImgDollarValue() { 
+			dojo.byId('UpdatedImgVal').value = dojo.byId('UpdatedSqKm').value * 20; 
+		}
+		
+		function UpdateDateValue(){
+		//alert(dojo.byId('UpdatedDelivDt').value);
+		//alert(dijit.byId('UpdatedDelivDt').value);
+		//require(["dojo/date/locale"], function(locale){
+		//alert(dojo.date.locale.format(dijit.byId("UpdatedDelivDt").value, {datePattern: "yyyy-MM-dd", selector: "date"})); 
+		//});
+		}
+		
+		function ClearSelFeatures(){
+			statesLayer.clearSelection();
+			dojo.byId('UpdatedOIDTB').value = ""; 
+			dojo.byId('StatusDD').selectedIndex = 0; 
+			dojo.byId('UpdatedDelivDt').value = ""; 
+			dojo.byId('UpdatedSqKm').value = "";  
+			dojo.byId('UpdatedImgVal').value = "";  
+			dojo.byId('UpdatedDeliveryNotes').value = ""; 
+			dojo.byId('UpdatedGeoAnalyst').value = ""; 
+			dojo.byId('UpdatedFollowup').selectedIndex = 0;
+		}
+		
+    </script>
+  </head>
+  <body class="claro">
+  <table width="100%"><tr><td><b>GeoCenter AOI Review Tool</b></td>
+  <td align="right">Show: <input type='checkbox' id='ShowSubmitted' checked>Submitted<img src="SubmittedPatch.JPG">  &nbsp;&nbsp;&nbsp;<input type='checkbox' id='ShowInProgress' checked>In Progress<img src="InProgressPatch.JPG">  &nbsp;&nbsp;&nbsp;<input type='checkbox' id='ShowProblem' checked>Problem<img src="ProblemPatch.JPG"> &nbsp;&nbsp;&nbsp; <input type='checkbox' id='ShowComplete' checked>Complete<img src="CompletePatch.JPG"> &nbsp;&nbsp;&nbsp; <input type='button' value='Filter View' onclick='UpdateFilter();'>&nbsp;&nbsp;&nbsp;</td></tr></table>
+  
+  <hr> 
+  <input type='checkbox' id='AOR COR Name'>AOR COR Name&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='AOR COR Email'>AOR COR Email&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='AOR COR Phone'>AOR COR Phone&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='USAID Mission OU'>USAID Mission OU&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='IP POC' checked>IP POC&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='IP Email'>IP Email&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='IP Phone'>IP Phone&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='IP Company' checked>IP Company&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Proj Title' checked>Proj Title&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Proj Description'>Proj Description&nbsp;&nbsp;&nbsp;
+
+<input type='checkbox' id='Existing Project'>Existing Proj YN&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Contract Number'>Contract Num&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Cost Image'>Had Img. Cost YN&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Cost Image Amount'>Cntrct. Img. Amt.&nbsp;&nbsp;&nbsp;
+<br>
+
+<input type='checkbox' id='Time Period'>Time Period&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Country'>Country&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Impact'>Impact&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='HasEVWHS'>Has EVWHS&nbsp;&nbsp;&nbsp;
+
+<input type='checkbox' id='DueDate' checked>Due Date&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Submit Date' checked>Submit Date&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Delivery Date'>Delivery Date&nbsp;&nbsp;&nbsp;
+
+<input type='checkbox' id='AOISize' checked>Request Size&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Status' checked>Status&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Sqr_KM'>Sqr KM&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Tot_Dollars'>Img Value&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='GeoAnalyst'>GeoCenter Analyst&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='FollowupInit'>Follow-up Init.&nbsp;&nbsp;&nbsp;
+<input type='checkbox' id='Delivery Details'>Delivery Details&nbsp;&nbsp;&nbsp;
+<input type='button' value='   Update Fields   ' onclick='UpdateColumns();'><hr>
+
+Update <input type='text' size ='2' id='UpdatedOIDTB' value="" disabled>: Status: <select id="StatusDD"><option value=""></option><option value="In Progress">In Progress</option><option value="Complete">Complete</option><option value="Problem">Problem</option></select> Delivery Date: <input type='text' data-dojo-type='dijit/form/DateTextBox' id='UpdatedDelivDt' onchange='UpdateDateValue()'> Square KM Delivered: <input size ='5' type='text' id='UpdatedSqKm' onchange='UpdateImgDollarValue()'> Value Delivered: <input size ='5' type='text' id='UpdatedImgVal'>GeoCenter Analyst: <input size ='10' type='text' id='UpdatedGeoAnalyst'>Follow-up: <select id="UpdatedFollowup"><option value=""></option><option value="Not Initiated">Not Initiated</option><option value="Initiated">Initiated</option><option value="Response Received">Response Received</option><option value="Follow-up Failed">Follow-up Failed</option></select><br> Delivery Details/Notes: <textarea id='UpdatedDeliveryNotes'> </textarea> &nbsp; <input type='button' value='Submit' onclick='ModFeature();'> <input type='button' value='Clear' onclick='ClearSelFeatures();'> 
+
+<br>
+    <div id="mainWindow" data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline'" style="width:100%; height:100%;">
+      <div id="map" data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'" >
+	  		<div id="HomeButton" role="navigation"></div><span id="info" style="position:absolute; right:15px; top:5px; color:#000; z-index:50;" ></span>
+      </div>
+      <div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'left',splitter:'true'" style="width:900px">
+      <div id="grid"></div>
+
+	</div>
+	
+  </body>
+</html> 

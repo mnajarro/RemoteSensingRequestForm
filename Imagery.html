@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	<title> GeoCenter Remote Sensing Program Home Page </title>
+	<link rel="stylesheet" href="styles.css">
+	<link rel="stylesheet" href="jquery-ui.css">
+	<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+	<script src="http://code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+	<script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
+	<script src="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js"></script>
+	<script>
+		/*$(function() {
+		$( "#accordion" ).accordion({
+		heightStyle: "content"
+			});
+		});*/
+  </script>
+	</head>
+	<body>
+		<div id="banner"> 
+			<img src="images/USAID_LAB_Red_Bar_Logo.jpg" id="labBanner"></img>
+		</div>
+		<div id="sidepanel">
+			<ul id="Navul">
+				<!--<li><img src="images/geocenterlogo.png" alt="GeoCenter Logo" id="logoDiv"></img></li><br><br>-->
+				<li class="li-sidepanel"><a href="index.html">Home</a></li>
+				<li class="li-sidepanel"><a href="About.html">About</a></li>
+				<li class="li-sidepanel"><a href="DatauseForm.html">Data Use Agreement</a></li>
+				<li class="li-sidepanel"><a href="NextView.html">NextView License</a></li>
+				<li class="li-sidepanel"><a href="AOIMap.html">Imagery Request Form</a></li>
+				<li class="li-sidepanel"><a href="Imagery.html">FAQ</a></li>
+				<br>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Ventures_Opt2_White.png" class="sidepanelimage3"></img><br>Innovation</p></li>
+				<li class="sidepanelimage"> <img src="images/WebsiteGraphic4.png" class="sidepanelimage2"></img><br>Technology</p></li>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Platforms_Opt3_White.png" class="sidepanelimage3"></img> <br>Platforms</p></li>
+				<li class="sidepanelimage"> <img src="images/USAID_ICON_Partnerships_White.png" class="sidepanelimage3"></img> <br>Partnership </p></li>	
+			</ul>
+		</div>
+		<div id="mainbody"> 
+			
+		<h1>
+			<img src="images/geocenterlogo.png" alt="GeoCenter Logo" id="logoDiv2"> REMOTE SENSING PROGRAM
+		</h1>
+		<h2> Frequently Asked Questions</h2>
+		<div id="accordion" class="accordion" data-role="collapsible-set">    
+		<div data-role="collapsible">
+			<h3>What is remote sensing and what can I do with imagery?</h3>     
+			<p class="accordion-content">
+			
+				Generally, remote sensing refers to the use of space borne sensors for Earth observation. "Satellite imagery" (e.g. what you see when looking at Google Earth) can be used to better understand environmental conditions and observe changes on the Earth's surface. 
+				Many USAID projects use satellite imagery to delineate boundaries for land tenure, assess locations for health project interventions, and to better understand the size and health of agriculture projects.
+			</p>
+		</div>
+		<div data-role="collapsible">
+			<h3>What type of imagery can the RS Program help me acquire?</h3>   
+			<p class="accordion-content">Generally, there are two types of satellite imagery, high resolution and medium to low resolution imagery.  The Remote Sensing Program provides high "spatial resolution" satellite imagery made available by the National Geospatial Agency (NGA). 
+			This type of imagery generally allows for identification of objects between 1-3 meters in size which is very good for observing cultural features such as buildings and agricultural plots in great detail. </p>
+			<br><br>Below are some examples of satellites that capture high resolution imagery: 
+				<ul style="list-style-type:none">
+					<li ><img src="images/WV3.png" class="imagerypics"></img></li>
+					<li ><img src="images/WV2.png" class="imagerypics"></img></li>
+					<li ><img src="images/Geoeye.png" class="imagerypics"></li>
+					<li id="ULImagery">For more information visit the <a href="http://www.digitalglobe.com/" target="_blank">Digital Globe Website</a></li>
+				</ul>
+			</div>
+			<div data-role="collapsible">
+			<h3>What licensing constrains are associated with the imagery?</h3>    
+			<p class="accordion-content">Implementing Partners and USAID staff using imagery acquired from the GeoCenter must abide by the NextView License. See the <a href="NextView.html">Licensing</a> section for more information.</p>
+			</div>
+			<div data-role="collapsible">
+			<h3>How long will it take to process imagery requests?</h3>    
+			<p class="accordion-content"> It will take approximately 2-8 weeks. The Remote Sensing Program imagery is not collected or archived in "real-time". Although we can occasionally acquire recent imagery, we are often limited to imagery that ranges from 6 months to 5 years old. 
+			This imagery can provide a very good baseline. 
+					If you would like to ensure imagery availability at specific time periods in the future for monitoring or evaluation, please consult us for options.</p>    
+			 </div>  
+			<div data-role="collapsible">			 
+			<h3>Can I request imagery for an entire country?</h3>   
+			<p class="accordion-content">
+				No. The area of most countries is too large to make practical use of imagery that would cover the whole country.  A typical satellite image will cover 15 x15 kilometers (225 square kilometers).  The resolution of imagery through this program is good for gaining a detailed understanding of a small area.  
+				Due to their high resolution, the large imagery file sizes (5-30 GB) take time to download.  </p>    
+			</div>
+			<div data-role="collapsible">
+			<h3>Are there freely available alternatives to high resolution imagery?</h3>    
+			
+				<p>If your project does not require 1-3 meter resolution, the GeoCenter can advise on other sources of imagery for projects that require less detail, such as medium to large spatial resolution images. Below are some alternatives to high spatial resolution imagery.</p>
+				<p><b>Medium to Low Resolution Imagery Satellites:</b></p>
+				<p>
+					<b>Landsat</b> represents the world's longest continuously acquired collection of space-based moderate-resolution land remote sensing data. Four decades of imagery provides a unique resource for those who work in agriculture, geology, forestry, regional planning, education, mapping, and global change research.<br><br><img src="images/landsat3.png" class="imagecenter"></img> 
+				</p>
+				<p>	Landsat images are also invaluable for emergency response and disaster relief.
+				As a joint initiative between the U.S. Geological Survey (USGS) and NASA, the Landsat Project and the data it collects support government, commercial, industrial, civilian, military, and educational communities throughout the United States and worldwide.<br><img src="images/landsat2.png" class="imagecenter"></img>
+				</p>
+				<p>
+				On May 30, 2013, data from the Landsat 8 satellite (launched as the Landsat Data Continuity Mission - LDCM- on February 11, 2013) became available. As with previous partnerships, this mission continues the acquisition of high-quality data that meet both NASA and USGS scientific and operational requirements for observing land use and land change.<img src="images/landsat1.png" class="imagecenter"></img>
+				</p>
+				<p>
+				Depending on the ban, a typical Landsat image has a spatial resolution ranging from 15 meters - 30 meters - 100 meters. The area of coverage of a Landsat 8 image is 185 km.  For more information visit the<a href="http://landsat.usgs.gov/index.php" target="_blank"> Landsat Website</a>
+				</p>
+				<br>
+				<p>
+					<b>MODIS</b>
+				</p>
+				<p>
+					Moderate-resolution Imaging Spectroradiometer.
+					MODIS offers a unique combination of features: it
+					detects a wide spectral range of electromagnetic energy; it
+					takes measurements at three spatial resolutions (levels of
+					detail); it takes measurements all day, every day; and it has a wide
+					field of view. This continual, comprehensive coverage allows MODIS to
+					complete an electromagnetic picture of the globe every two days.
+					MODIS's frequent coverage complements other imaging systems such as
+					Landsat's Enhanced Thematic Mapper Plus, which reveals the Earth in
+					finer spatial detail, but can only image a given area once every 16 days-
+					too infrequently to capture many of the rapid biological and meteorological changes that
+					MODIS observes.<br>
+					<img src="images/modis3.png" class="imagecenter"></img> <img src="images/ModisSpec.PNG" class="imagecenter">
+				</p>
+				<p>
+					Some of the most easily recognizable changes are occurring on land.
+					Human-induced changes such as deforestation, urbanization, and
+					hydroelectric and irrigation projects combine with the Earth’s existing
+					cycles of fire, erosion, and floods to change our landscape.
+					While we can often see these changes happening on a local scale, it
+					is impossible to assess global effects through fieldwork alone. With
+					its near-daily coverage of the Earth's surface, MODIS provides comprehensive
+					measurements that scientists and land managers need to
+					make informed decisions about managing Earth's natural resources
+					from season to season, year to year, and decade to decade.<br>
+					<img src="images/modis2.png" class="imagecenter"></img><br>
+					Depending on the band, the spatial resolution of a MODIS image can range from 250 meters to 1000 meters. The area of coverage of a MODIS image is 2330 km. For more information visit the <a href="http://modis.gsfc.nasa.gov/" target="_blank">MODIS website</a>.
+				</p>
+
+			</div>
+			<div data-role="collapsible">
+			<h3>What kinds of software do I need to use imagery?</h3>    
+			<p class="accordion-content" > 
+				Using imagery requires specialized computer software and a technical background in remote sensing. Generally, ArcGIS Desktop software can view and edit imagery. Other popular imagery software includes ERDAS IMAGINE, ENVI and QGIS. 
+				To  maximize the benefit of obtaining satellite imagery via the GeoCenter, please ensure that the project it will be applied toward can accommodate the necessary hardware, software, and expertise. </p>
+			</div>
+			<div data-role="collapsible">
+			<h3>Does the GeoCenter process or provide analysis of the imagery?</h3>     
+			<p class="accordion-content">All imagery provided through the Remote Sensing Program comes georeferenced and orthorectified. The Remote Sensing Program is currently only delivering imagery and providing expert consultations to requesters. It does not include analysis of the imagery.</p>
+			</div>
+			<div data-role="collapsible">
+			<h3>What other remote sensing issues should I be aware of when requesting imagery?</h3>     
+			<p class="accordion-content">Satellite imagery cannot penetrate clouds or the tree canopy. This limitation is important to consider if your project is located in tropical areas closer to the equator.</p>
+			</div>
+		
+		</div>
+		<br><br>
+		<img src="http://www.usaid.gov/sites/all/themes/usaid/logo.png" alt="U.S. Agency for International Development" class="imagecenter"><br>
+		
+		
+		
+	</body>
+</html>
